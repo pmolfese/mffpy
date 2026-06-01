@@ -16,8 +16,7 @@ from os import makedirs, remove
 from os.path import splitext, exists, join
 from shutil import rmtree
 from subprocess import check_output
-import xml.etree.ElementTree as ET
-
+from lxml import etree as ET
 from typing import Dict, Any
 
 from .dict2xml import dict2xml
@@ -53,13 +52,12 @@ class Writer:
 
         self.create_directory()
 
-        # write .xml/.bin files.  For .xml files we need to set the default
-        # namespace to avoid `ns0:` being prepended to each tag.
         for filename, (content, typ) in self.files.items():
             if '.xml' == splitext(filename)[1]:
-                ET.register_namespace('', typ._xmlns[1:-1])
-            content.write(join(self.mffdir, filename), encoding='UTF-8',
-                          xml_declaration=True, method='xml')
+                content.write(join(self.mffdir, filename), encoding='UTF-8',
+                              xml_declaration=True)
+            else:
+                content.write(join(self.mffdir, filename))
 
         # convert from .mff to .mfz
         if self.ext == '.mfz':
@@ -120,7 +118,7 @@ class Writer:
         """
         xmls = coordinates_and_sensor_layout(device)
         for name, xml in xmls.items():
-            self.files[name + '.xml'] = (ET.ElementTree(xml.root), type(xml))
+            self.files[name + '.xml'] = (xml.root.getroottree(), type(xml))
 
     @property
     def filename(self) -> str:

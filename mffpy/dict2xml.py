@@ -12,7 +12,7 @@ distributed under the License is distributed on an
 "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF
 ANY KIND, either express or implied.
 """
-import xml.etree.ElementTree as ET
+from lxml import etree as ET
 from typing import Dict, List, Union
 
 __all__ = [
@@ -21,19 +21,13 @@ __all__ = [
     'ATTR'
 ]
 
-
-def register_namespace(ns, tag=''):
-    """register namespace prefix `ns` for tag `tag`"""
-    ET.register_namespace(tag, ns)
-
-
 # key `TEXT` indicates innerXML
 TEXT = 'text'
 # key `ATTR` indicates an XML attribute
 ATTR = 'attributes'
 
 
-def dict2el(tag: str, content: dict, el: ET.Element,
+def dict2el(tag: str, content: dict, el: ET._Element,
             namespace: str = '') -> None:
     attrs = content.pop(ATTR, {})
     assert isinstance(attrs, dict), f"""
@@ -44,13 +38,13 @@ def dict2el(tag: str, content: dict, el: ET.Element,
         subel.text = text
     elif isinstance(text, dict):
         for subtag, inside in text.items():
-            add2el(subtag, inside, subel)
+            add2el(subtag, inside, subel, namespace)
     else:
         raise AttributeError(f"inside of <{tag}> has unknown format [{text}]")
 
 
 def add2el(tag: str, content: Union[dict, List[dict]],
-           el: ET.Element, namespace: str = '') -> None:
+           el: ET._Element, namespace: str = '') -> None:
     if isinstance(content, dict):
         dict2el(tag, content, el, namespace)
     elif isinstance(content, list):
@@ -62,13 +56,13 @@ def add2el(tag: str, content: Union[dict, List[dict]],
 
 
 def dict2xml(content: Dict[str, Union[Dict, List]], rootname: str = 'root',
-             namespace: str = '') -> ET.ElementTree:
-    kwargs = {
-        'xmlns': namespace,
-        'xmlns:xsi': "http://www.w3.org/2001/XMLSchema-instance"
-    }
-    root = ET.Element(rootname, **kwargs)  # type: ignore
+             namespace: str = '') -> ET._ElementTree:
+    ns_prefix = '{%s}' % namespace if namespace else ''
+    nsmap: dict = {'xsi': "http://www.w3.org/2001/XMLSchema-instance"}
+    if namespace:
+        nsmap[None] = namespace
+    root = ET.Element(ns_prefix + rootname, nsmap=nsmap)
     for tag, inside in content.items():
-        add2el(tag, inside, root)
+        add2el(tag, inside, root, ns_prefix)
 
     return ET.ElementTree(root)
